@@ -27,6 +27,18 @@ data class UiState(
     val error: String? = null,
 )
 
+/** What the add-expense form collects. */
+data class ExpenseDraft(
+    val amount: Double,
+    val categoryId: String,
+    val note: String,
+    val date: LocalDate,
+    val store: String,
+    /** "cash", "card" or null. */
+    val paymentMethod: String?,
+    val cardName: String,
+)
+
 class ExpenseViewModel(app: Application) : AndroidViewModel(app) {
     val api = SupabaseApi(app)
 
@@ -96,12 +108,21 @@ class ExpenseViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
-    fun addExpense(amount: Double, categoryId: String, note: String, date: LocalDate, onDone: (Boolean) -> Unit) =
+    fun addExpense(draft: ExpenseDraft, onDone: (Boolean) -> Unit) =
         viewModelScope.launch {
             try {
                 val created = api.addExpense(
-                    NewExpense(amount, categoryId, note.trim().ifEmpty { null }, date.toString()),
+                    NewExpense(
+                        amount = draft.amount,
+                        categoryId = draft.categoryId,
+                        note = draft.note.trim().ifEmpty { null },
+                        spentOn = draft.date.toString(),
+                        store = draft.store.trim().ifEmpty { null },
+                        paymentMethod = draft.paymentMethod,
+                        cardName = if (draft.paymentMethod == "card") draft.cardName.trim().ifEmpty { null } else null,
+                    ),
                 )
+                val date = draft.date
                 val month = _state.value.month
                 if (YearMonth.from(date) == month) {
                     _state.update { s ->

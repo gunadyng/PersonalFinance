@@ -52,6 +52,11 @@ export default function Tracker({ email }: { email: string }) {
     return [...sums.entries()].sort((a, b) => b[1] - a[1])
   }, [expenses])
 
+  const [pastStores, pastCards] = useMemo(() => {
+    const uniq = (xs: (string | null)[]) => [...new Set(xs.filter((x): x is string => Boolean(x)))]
+    return [uniq(expenses.map((e) => e.store)), uniq(expenses.map((e) => e.card_name))]
+  }, [expenses])
+
   const days = useMemo(() => {
     const groups: { day: string; items: Expense[] }[] = []
     for (const e of expenses) {
@@ -98,7 +103,13 @@ export default function Tracker({ email }: { email: string }) {
 
       <main className="layout">
         <section className="col">
-          <AddExpense categories={categories} onAdded={onAdded} onManageCategories={() => setManaging(true)} />
+          <AddExpense
+            categories={categories}
+            onAdded={onAdded}
+            onManageCategories={() => setManaging(true)}
+            pastStores={pastStores}
+            pastCards={pastCards}
+          />
           <button className="secondary" onClick={() => setManaging(true)}>
             Manage categories
           </button>
@@ -182,7 +193,7 @@ export default function Tracker({ email }: { email: string }) {
                           </span>
                           <span className="grow">
                             <span>{c?.name}</span>
-                            {e.note && <span className="muted small block">{e.note}</span>}
+                            {details(e) && <span className="muted small block">{details(e)}</span>}
                           </span>
                           <span className="num">{money(e.amount)}</span>
                           <button className="icon-btn" onClick={() => remove(e)} aria-label="Delete expense">
@@ -204,4 +215,11 @@ export default function Tracker({ email }: { email: string }) {
       )}
     </div>
   )
+}
+
+/** "Lunch · Starbucks · 💳 Amex Gold": the optional bits of an expense, in one line. */
+function details(e: Expense): string {
+  const paid =
+    e.payment_method === 'cash' ? '💵 Cash' : e.payment_method === 'card' ? `💳 ${e.card_name || 'Card'}` : null
+  return [e.note, e.store, paid].filter(Boolean).join(' · ')
 }

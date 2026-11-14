@@ -23,6 +23,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.personalfinance.tracker.ExpenseDraft
 import com.personalfinance.tracker.data.Category
 import java.time.Instant
 import java.time.LocalDate
@@ -51,14 +53,21 @@ import java.time.ZoneOffset
 fun AddExpenseSheet(
     categories: List<Category>,
     onDismiss: () -> Unit,
-    onSave: (amount: Double, categoryId: String, note: String, date: LocalDate, done: (Boolean) -> Unit) -> Unit,
+    onSave: (draft: ExpenseDraft, done: (Boolean) -> Unit) -> Unit,
     onManageCategories: () -> Unit,
+    pastStores: List<String>,
+    pastCards: List<String>,
+    initialPayment: String?,
+    initialCard: String,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var amount by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf<String?>(null) }
     var note by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(LocalDate.now()) }
+    var store by remember { mutableStateOf("") }
+    var payment by remember { mutableStateOf(initialPayment) }
+    var cardName by remember { mutableStateOf(initialCard) }
     var pickingDate by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -97,6 +106,31 @@ fun AddExpenseSheet(
                 FilterChip(selected = false, onClick = onManageCategories, label = { Text("＋ New category") })
             }
             OutlinedTextField(
+                value = store,
+                onValueChange = { if (it.length <= 80) store = it },
+                label = { Text("Store or shop (optional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Suggestions(pastStores, store) { store = it }
+            Text("Paid with", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(null to "Not set", "cash" to "💵 Cash", "card" to "💳 Card").forEach { (value, label) ->
+                    FilterChip(selected = payment == value, onClick = { payment = value }, label = { Text(label) })
+                }
+            }
+            if (payment == "card") {
+                OutlinedTextField(
+                    value = cardName,
+                    onValueChange = { if (it.length <= 40) cardName = it },
+                    label = { Text("Card name (optional)") },
+                    placeholder = { Text("e.g. Visa, Amex Gold") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Suggestions(pastCards, cardName) { cardName = it }
+            }
+            OutlinedTextField(
                 value = note,
                 onValueChange = { if (it.length <= 200) note = it },
                 label = { Text("Note (optional)") },
@@ -121,7 +155,7 @@ fun AddExpenseSheet(
                         else -> {
                             busy = true
                             error = null
-                            onSave(value, cat, note, date) { ok ->
+                            onSave(ExpenseDraft(value, cat, note, date, store, payment, cardName)) { ok ->
                                 busy = false
                                 if (ok) onDismiss()
                             }
@@ -152,5 +186,18 @@ fun AddExpenseSheet(
             },
             dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Cancel") } },
         ) { DatePicker(state = pickerState) }
+    }
+}
+
+/** Up to five previously used values that match what's typed so far, as tappable chips. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Suggestions(options: List<String>, typed: String, onPick: (String) -> Unit) {
+    val matches = options
+        .filter { it.contains(typed.trim(), ignoreCase = true) && !it.equals(typed.trim(), ignoreCase = true) }
+        .take(5)
+    if (matches.isEmpty()) return
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        matches.forEach { m -> SuggestionChip(onClick = { onPick(m) }, label = { Text(m) }) }
     }
 }

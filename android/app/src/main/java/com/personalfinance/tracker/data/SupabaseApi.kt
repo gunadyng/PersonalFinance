@@ -122,7 +122,7 @@ class SupabaseApi(context: Context) {
     /** Expenses with spent_on in [from, to), both YYYY-MM-DD. */
     suspend fun expenses(from: String, to: String): List<Expense> {
         val url = rest("expenses")
-            .addQueryParameter("select", "id,amount,category_id,note,spent_on,created_at")
+            .addQueryParameter("select", "id,amount,category_id,note,spent_on,created_at,store,payment_method,card_name")
             .addQueryParameter("spent_on", "gte.$from")
             .addQueryParameter("spent_on", "lt.$to")
             .addQueryParameter("order", "spent_on.desc,created_at.desc")
