@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,9 @@ fun HomeScreen(vm: ExpenseViewModel, state: UiState, onManageCategories: () -> U
     var adding by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<Expense?>(null) }
+    // You usually pay the same way, so the form starts with the last choice.
+    var lastPayment by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastCard by rememberSaveable { mutableStateOf("") }
     val snackbar = remember { SnackbarHostState() }
     val byId = remember(state.categories) { state.categories.associateBy { it.id } }
 
@@ -136,7 +140,15 @@ fun HomeScreen(vm: ExpenseViewModel, state: UiState, onManageCategories: () -> U
         AddExpenseSheet(
             categories = state.categories,
             onDismiss = { adding = false },
-            onSave = { amount, categoryId, note, date, done -> vm.addExpense(amount, categoryId, note, date, done) },
+            onSave = { draft, done ->
+                lastPayment = draft.paymentMethod
+                lastCard = draft.cardName
+                vm.addExpense(draft, done)
+            },
+            initialPayment = lastPayment,
+            initialCard = lastCard,
+            pastStores = state.expenses.mapNotNull { it.store }.distinct(),
+            pastCards = state.expenses.mapNotNull { it.cardName }.distinct(),
             onManageCategories = { adding = false; onManageCategories() },
         )
     }
@@ -238,7 +250,7 @@ private fun DayCard(day: String, items: List<Expense>, byId: Map<String, Categor
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(c?.name ?: "Unknown")
-                        e.note?.let {
+                        expenseDetails(e).takeIf { it.isNotEmpty() }?.let {
                             Text(
                                 it,
                                 style = MaterialTheme.typography.bodySmall,
@@ -254,4 +266,14 @@ private fun DayCard(day: String, items: List<Expense>, byId: Map<String, Categor
             }
         }
     }
+}
+
+/** "Lunch · Starbucks · 💳 Amex Gold": the optional bits of an expense, in one line. */
+private fun expenseDetails(e: Expense): String {
+    val paid = when (e.paymentMethod) {
+        "cash" -> "💵 Cash"
+        "card" -> "💳 ${e.cardName ?: "Card"}"
+        else -> null
+    }
+    return listOfNotNull(e.note, e.store, paid).joinToString(" · ")
 }

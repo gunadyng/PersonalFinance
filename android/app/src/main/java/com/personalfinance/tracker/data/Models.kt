@@ -22,6 +22,10 @@ data class Expense(
     /** ISO date, YYYY-MM-DD. */
     @SerialName("spent_on") val spentOn: String,
     @SerialName("created_at") val createdAt: String,
+    val store: String? = null,
+    /** "cash", "card" or null when not recorded. */
+    @SerialName("payment_method") val paymentMethod: String? = null,
+    @SerialName("card_name") val cardName: String? = null,
 )
 
 @Serializable
@@ -30,6 +34,9 @@ data class NewExpense(
     @SerialName("category_id") val categoryId: String,
     val note: String?,
     @SerialName("spent_on") val spentOn: String,
+    val store: String?,
+    @SerialName("payment_method") val paymentMethod: String?,
+    @SerialName("card_name") val cardName: String?,
 )
 
 @Serializable

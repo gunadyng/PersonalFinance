@@ -14,7 +14,7 @@ Both apps sign in to the same Supabase account, so anything you add on your phon
 
 ## Features
 
-- Add an expense: amount, category, optional note, date (defaults to today).
+- Add an expense: amount, category, and optionally the store/shop, how you paid (cash or card, plus the card's name), a note and the date (defaults to today).
 - Default categories: Food & Dining, Groceries, Transport, Bills & Utilities, Housing, Shopping, Entertainment,
   Health, Travel, Education, Personal Care, Gifts & Donations, Subscriptions, Other.
 - Add your own categories with an icon and colour; delete ones you don't use.
@@ -30,6 +30,8 @@ Both apps sign in to the same Supabase account, so anything you add on your phon
    [`supabase/migrations/20261114000000_init.sql`](supabase/migrations/20261114000000_init.sql) and click **Run**.
    It creates the `categories` and `expenses` tables, privacy rules so each account only sees its own rows,
    and seeds the default categories for every new account.
+   Then do the same with each later file in that folder, in name order
+   (e.g. [`20261114010000_store_and_payment.sql`](supabase/migrations/20261114010000_store_and_payment.sql)).
 2. Optional: under **Authentication → Sign In / Providers → Email**, turn off **Confirm email** if you'd rather not
    click a confirmation link when creating your account.
 

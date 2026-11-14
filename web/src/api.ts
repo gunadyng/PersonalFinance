@@ -16,7 +16,14 @@ export interface Expense {
   note: string | null
   spent_on: string // YYYY-MM-DD
   created_at: string
+  store: string | null
+  payment_method: PaymentMethod | null
+  card_name: string | null
 }
+
+export type PaymentMethod = 'cash' | 'card'
+
+const EXPENSE_COLUMNS = 'id,amount,category_id,note,spent_on,created_at,store,payment_method,card_name'
 
 function db() {
   if (!supabase) throw new Error('Supabase is not configured')
@@ -64,7 +71,7 @@ export async function deleteCategory(id: string): Promise<void> {
 export async function loadExpenses(from: string, to: string): Promise<Expense[]> {
   const { data, error } = await db()
     .from('expenses')
-    .select('id,amount,category_id,note,spent_on,created_at')
+    .select(EXPENSE_COLUMNS)
     .gte('spent_on', from)
     .lt('spent_on', to)
     .order('spent_on', { ascending: false })
@@ -78,11 +85,20 @@ export async function addExpense(input: {
   category_id: string
   note: string
   spent_on: string
+  store: string
+  payment_method: PaymentMethod | null
+  card_name: string
 }): Promise<Expense> {
+  const card = input.payment_method === 'card' ? input.card_name.trim() || null : null
   const { data, error } = await db()
     .from('expenses')
-    .insert({ ...input, note: input.note.trim() || null })
-    .select('id,amount,category_id,note,spent_on,created_at')
+    .insert({
+      ...input,
+      note: input.note.trim() || null,
+      store: input.store.trim() || null,
+      card_name: card,
+    })
+    .select(EXPENSE_COLUMNS)
     .single()
   if (error) throw friendly(error)
   return { ...data, amount: Number(data.amount) }
